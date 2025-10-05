@@ -47,21 +47,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error_message = $result['message'];
         }
     }
-    
-    if (isset($_POST['delete_equipment'])) {
-        $equipment_id = $_POST['equipment_id'];
-        $result = $equipmentFunctions->deleteEquipment($equipment_id);
-        
-        if ($result['success']) {
-            $success_message = $result['message'];
-        } else {
-            $error_message = $result['message'];
-        }
-    }
 }
 
-// دریافت همه تجهیزات
-$all_equipment = $equipmentFunctions->getAllEquipment();
+// دریافت همه تجهیزات (حذف شده)
+// $all_equipment = $equipmentFunctions->getAllEquipment();
 ?>
 
 <!DOCTYPE html>
@@ -281,49 +270,6 @@ $all_equipment = $equipmentFunctions->getAllEquipment();
             margin-top: 10px;
         }
         
-        .equipment-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        .equipment-card {
-            background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(245,247,250,0.95));
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            border: 1px solid rgba(255,255,255,0.5);
-            border-right: 4px solid #6a11cb;
-        }
-        
-        .equipment-type {
-            background: #6a11cb;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            margin-bottom: 10px;
-            display: inline-block;
-        }
-        
-        .equipment-details {
-            margin: 10px 0;
-        }
-        
-        .equipment-detail {
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-        
-        .specs-detail {
-            background: #f8f9fa;
-            padding: 8px;
-            border-radius: 6px;
-            margin: 5px 0;
-            font-size: 13px;
-        }
-        
         .notification {
             padding: 15px;
             margin-bottom: 20px;
@@ -510,10 +456,6 @@ $all_equipment = $equipmentFunctions->getAllEquipment();
                 grid-template-columns: 1fr;
             }
             
-            .equipment-grid {
-                grid-template-columns: 1fr;
-            }
-            
             .user-info {
                 justify-content: center;
             }
@@ -671,84 +613,6 @@ $all_equipment = $equipmentFunctions->getAllEquipment();
                 </form>
             </div>
 
-            <div class="form-container">
-                <h2><i class="fas fa-list"></i> لیست تجهیزات ثبت شده</h2>
-                
-                <?php if (empty($all_equipment)): ?>
-                    <div style="text-align: center; padding: 40px; color: #666;">
-                        <i class="fas fa-laptop" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
-                        <h3>هنوز تجهیزی ثبت نشده است</h3>
-                        <p>برای شروع، اولین تجهیز را در فرم بالا ثبت کنید</p>
-                    </div>
-                <?php else: ?>
-                    <div class="equipment-grid">
-                        <?php foreach ($all_equipment as $equipment): ?>
-                            <div class="equipment-card">
-                                <div class="equipment-type">
-                                    <?php 
-                                    $type_names = [
-                                        'desktop' => 'کامپیوتر',
-                                        'laptop' => 'لپ‌تاپ', 
-                                        'surface' => 'سرفیس',
-                                        'monitor' => 'مانیتور',
-                                        'printer' => 'پرینتر',
-                                        'scanner' => 'اسکنر',
-                                        'other' => 'سایر'
-                                    ];
-                                    echo $type_names[$equipment['equipment_type']];
-                                    ?>
-                                </div>
-                                
-                                <h4><?php echo htmlspecialchars($equipment['brand'] . ' ' . $equipment['model']); ?></h4>
-                                
-                                <div class="equipment-details">
-                                    <div class="equipment-detail">
-                                        <strong><i class="fas fa-user"></i> کاربر:</strong> <?php echo htmlspecialchars($equipment['full_name']); ?>
-                                    </div>
-                                    <div class="equipment-detail">
-                                        <strong><i class="fas fa-building"></i> دپارتمان:</strong> <?php echo htmlspecialchars($equipment['department']); ?>
-                                    </div>
-                                    <?php if (!empty($equipment['serial_number'])): ?>
-                                        <div class="equipment-detail">
-                                            <strong><i class="fas fa-barcode"></i> شماره سریال:</strong> <?php echo htmlspecialchars($equipment['serial_number']); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <?php if (!empty($equipment['cpu']) || !empty($equipment['ram']) || !empty($equipment['hdd'])): ?>
-                                        <div style="margin-top: 10px;">
-                                            <strong><i class="fas fa-microchip"></i> مشخصات فنی:</strong>
-                                            <?php if (!empty($equipment['cpu'])): ?>
-                                                <div class="specs-detail">
-                                                    <strong>پردازنده:</strong> <?php echo htmlspecialchars($equipment['cpu']); ?>
-                                                </div>
-                                            <?php endif; ?>
-                                            <?php if (!empty($equipment['ram'])): ?>
-                                                <div class="specs-detail">
-                                                    <strong>حافظه رم:</strong> <?php echo htmlspecialchars($equipment['ram']); ?>
-                                                </div>
-                                            <?php endif; ?>
-                                            <?php if (!empty($equipment['hdd'])): ?>
-                                                <div class="specs-detail">
-                                                    <strong>هارد دیسک:</strong> <?php echo htmlspecialchars($equipment['hdd']); ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                                
-                                <form method="POST" action="" style="margin-top: 15px;">
-                                    <input type="hidden" name="equipment_id" value="<?php echo $equipment['id']; ?>">
-                                    <button type="submit" name="delete_equipment" class="btn btn-danger" 
-                                            onclick="return confirm('آیا از حذف این تجهیز مطمئن هستید؟')">
-                                        <i class="fas fa-trash"></i> حذف
-                                    </button>
-                                </form>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-
             <!-- دکمه فانتزی برای رفتن به صفحه نمایش تجهیزات -->
             <div class="action-section">
                 <div class="fancy-button-container">
@@ -759,6 +623,21 @@ $all_equipment = $equipmentFunctions->getAllEquipment();
                         <div class="fancy-btn-content">
                             <div class="fancy-btn-title">گزارش‌گیری تجهیزات</div>
                             <div class="fancy-btn-subtitle">مشاهده، جستجو و دریافت گزارش</div>
+                        </div>
+                        <div class="fancy-btn-arrow">
+                            <i class="fas fa-arrow-left"></i>
+                        </div>
+                    </a>
+                </div>
+                
+                <div class="fancy-button-container">
+                    <a href="equipment_list.php" class="fancy-btn">
+                        <div class="fancy-btn-icon">
+                            <i class="fas fa-list"></i>
+                        </div>
+                        <div class="fancy-btn-content">
+                            <div class="fancy-btn-title">مشاهده لیست تجهیزات</div>
+                            <div class="fancy-btn-subtitle">مدیریت و مشاهده تمام تجهیزات ثبت شده</div>
                         </div>
                         <div class="fancy-btn-arrow">
                             <i class="fas fa-arrow-left"></i>
