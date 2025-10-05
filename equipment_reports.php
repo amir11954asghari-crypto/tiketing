@@ -19,22 +19,33 @@ if (!$is_it_admin) {
 }
 
 $equipmentFunctions = new EquipmentFunctions();
+$userFunctions = new UserFunctions();
 $search_results = [];
 $search_performed = false;
 $search_type = 'name';
 $search_term = '';
+$selected_user_id = '';
+$selected_user_name = '';
 
 // پردازش جستجو
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search'])) {
     $search_type = $_POST['search_type'];
     $search_term = trim($_POST['search_term']);
+    $selected_user_id = $_POST['selected_user_id'] ?? '';
+    $selected_user_name = $_POST['selected_user_name'] ?? '';
     $search_performed = true;
     
     if (!empty($search_term)) {
-        if ($search_type === 'name') {
-            $search_results = $equipmentFunctions->searchEquipmentByUserName($search_term);
+        if ($search_type === 'name' && !empty($selected_user_id)) {
+            // جستجو بر اساس کاربر انتخاب شده
+            $search_results = $equipmentFunctions->getUserEquipment($selected_user_id);
         } else {
-            $search_results = $equipmentFunctions->searchEquipmentBySerial($search_term);
+            // جستجو بر اساس عبارت
+            if ($search_type === 'name') {
+                $search_results = $equipmentFunctions->searchEquipmentByUserName($search_term);
+            } else {
+                $search_results = $equipmentFunctions->searchEquipmentBySerial($search_term);
+            }
         }
     }
 }
@@ -339,6 +350,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search'])) {
             margin: 0 2px;
         }
         
+        /* استایل جستجوی کاربر */
+        .user-search-container {
+            position: relative;
+        }
+        
+        .user-search-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            background: rgba(255,255,255,0.9);
+        }
+        
+        .user-search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .user-result-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s;
+        }
+        
+        .user-result-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .user-result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .selected-user {
+            background: #e7f3ff;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border-right: 3px solid #2575fc;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
         @media (max-width: 768px) {
             .search-form {
                 grid-template-columns: 1fr;
@@ -392,24 +459,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search'])) {
                 <p>جستجو، مشاهده و دریافت گزارش کامل تجهیزات سخت‌افزاری</p>
             </div>
 
-            <form method="POST" action="" class="search-form">
+            <form method="POST" action="" class="search-form" id="searchForm">
                 <div class="form-group">
                     <label for="search_type"><i class="fas fa-search"></i> نوع جستجو</label>
-                    <select id="search_type" name="search_type" required>
+                    <select id="search_type" name="search_type" required onchange="toggleSearchField()">
                         <option value="name" <?php echo $search_type === 'name' ? 'selected' : ''; ?>>نام و نام خانوادگی</option>
                         <option value="serial" <?php echo $search_type === 'serial' ? 'selected' : ''; ?>>شماره سریال / پلاک</option>
                     </select>
                 </div>
                 
                 <div class="form-group">
-                    <label for="search_term">
-                        <i class="fas fa-user"></i> 
-                        <?php echo $search_type === 'name' ? 'نام و نام خانوادگی' : 'شماره سریال / پلاک'; ?>
-                    </label>
-                    <input type="text" id="search_term" name="search_term" 
-                           value="<?php echo htmlspecialchars($search_term); ?>" 
-                           placeholder="<?php echo $search_type === 'name' ? 'حداقل 3 حرف از نام کاربر را وارد کنید' : 'شماره سریال یا پلاک را وارد کنید'; ?>" 
-                           required>
+                    <div id="name_search_field" style="<?php echo $search_type === 'name' ? '' : 'display: none;'; ?>">
+                        <label for="user_search">
+                            <i class="fas fa-user"></i> جستجوی کاربر
+                        </label>
+                        <div class="user-search-container">
+                            <input type="text" id="user_search" name="user_search" 
+                                   value="<?php echo $search_type === 'name' ? htmlspecialchars($search_term) : ''; ?>" 
+                                   placeholder="حداقل 3 حرف از فامیل کاربر را وارد کنید..."
+                                   class="user-search-input" autocomplete="off">
+                            <div id="user_search_results" class="user-search-results"></div>
+                        </div>
+                        <div id="selected_user_display" class="selected-user <?php echo empty($selected_user_id) ? 'hidden' : ''; ?>">
+                            <strong>کاربر انتخاب شده:</strong>
+                            <span id="selected_user_name"><?php echo htmlspecialchars($selected_user_name); ?></span>
+                            <input type="hidden" id="selected_user_id" name="selected_user_id" value="<?php echo $selected_user_id; ?>">
+                            <input type="hidden" id="selected_user_fullname" name="selected_user_name" value="<?php echo htmlspecialchars($selected_user_name); ?>">
+                        </div>
+                    </div>
+                    
+                    <div id="serial_search_field" style="<?php echo $search_type === 'serial' ? '' : 'display: none;'; ?>">
+                        <label for="search_term">
+                            <i class="fas fa-barcode"></i> شماره سریال / پلاک
+                        </label>
+                        <input type="text" id="search_term_serial" name="search_term" 
+                               value="<?php echo $search_type === 'serial' ? htmlspecialchars($search_term) : ''; ?>" 
+                               placeholder="شماره سریال یا پلاک را وارد کنید">
+                    </div>
                 </div>
                 
                 <button type="submit" name="search" class="btn btn-primary">
@@ -418,16 +504,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search'])) {
             </form>
 
             <?php if ($search_performed): ?>
-                <?php if (empty($search_term)): ?>
+                <?php if (empty($search_term) && empty($selected_user_id)): ?>
                     <div class="notification error">
                         <i class="fas fa-exclamation-circle"></i> لطفاً عبارت جستجو را وارد کنید
                     </div>
                 <?php elseif (empty($search_results)): ?>
                     <div class="notification error">
                         <i class="fas fa-info-circle"></i> 
-                        هیچ تجهیزی 
-                        <?php echo $search_type === 'name' ? 'برای کاربر "' . htmlspecialchars($search_term) . '"' : 'با شماره سریال "' . htmlspecialchars($search_term) . '"'; ?>
-                        یافت نشد
+                        <?php if ($search_type === 'name' && !empty($selected_user_id)): ?>
+                            هیچ تجهیزی برای کاربر "<?php echo htmlspecialchars($selected_user_name); ?>" یافت نشد
+                        <?php else: ?>
+                            هیچ تجهیزی 
+                            <?php echo $search_type === 'name' ? 'برای "' . htmlspecialchars($search_term) . '"' : 'با شماره سریال "' . htmlspecialchars($search_term) . '"'; ?>
+                            یافت نشد
+                        <?php endif; ?>
                     </div>
                 <?php else: ?>
                     <div class="result-summary">
@@ -449,12 +539,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search'])) {
                         <button onclick="window.print()" class="btn btn-primary">
                             <i class="fas fa-print"></i> چاپ گزارش
                         </button>
-                        <button onclick="generatePDF()" class="btn btn-danger">
+                        
+                        <!-- اصلاح شده: انتقال پارامترهای صحیح -->
+                        <a href="generate_equipment_pdf.php?type=<?php echo $search_type; ?>&term=<?php echo urlencode($search_type === 'name' && !empty($selected_user_id) ? $selected_user_name : $search_term); ?>&user_id=<?php echo $selected_user_id; ?>" class="btn btn-danger" target="_blank">
                             <i class="fas fa-file-pdf"></i> خروجی PDF
-                        </button>
-                        <button onclick="exportToExcel()" class="btn btn-success">
+                        </a>
+                        
+                        <a href="export_equipment_excel.php?type=<?php echo $search_type; ?>&term=<?php echo urlencode($search_type === 'name' && !empty($selected_user_id) ? $selected_user_name : $search_term); ?>&user_id=<?php echo $selected_user_id; ?>" class="btn btn-success" target="_blank">
                             <i class="fas fa-file-excel"></i> خروجی Excel
-                        </button>
+                        </a>
                     </div>
 
                     <div class="equipment-grid">
@@ -525,38 +618,111 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search'])) {
     </div>
 
     <script>
-        // تغییر placeholder بر اساس نوع جستجو
-        document.getElementById('search_type').addEventListener('change', function() {
-            const searchTerm = document.getElementById('search_term');
-            if (this.value === 'name') {
-                searchTerm.placeholder = 'حداقل 3 حرف از نام کاربر را وارد کنید';
+        // تغییر فیلد جستجو بر اساس نوع
+        function toggleSearchField() {
+            const searchType = document.getElementById('search_type').value;
+            const nameField = document.getElementById('name_search_field');
+            const serialField = document.getElementById('serial_search_field');
+            
+            if (searchType === 'name') {
+                nameField.style.display = 'block';
+                serialField.style.display = 'none';
             } else {
-                searchTerm.placeholder = 'شماره سریال یا پلاک را وارد کنید';
+                nameField.style.display = 'none';
+                serialField.style.display = 'block';
+            }
+        }
+
+        // جستجوی کاربر با AJAX
+        let searchTimeout;
+        document.getElementById('user_search').addEventListener('input', function() {
+            const searchTerm = this.value.trim();
+            const resultsContainer = document.getElementById('user_search_results');
+            
+            // پاک کردن تایموت قبلی
+            clearTimeout(searchTimeout);
+            
+            // اگر کمتر از 3 حرف باشد، نتایج را پنهان می‌کنیم
+            if (searchTerm.length < 3) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+            
+            // تایموت برای جلوگیری از درخواست‌های زیاد
+            searchTimeout = setTimeout(() => {
+                searchUsers(searchTerm);
+            }, 300);
+        });
+
+        // تابع جستجوی کاربران
+        function searchUsers(searchTerm) {
+            const resultsContainer = document.getElementById('user_search_results');
+            
+            fetch('search_users.php?q=' + encodeURIComponent(searchTerm))
+                .then(response => response.json())
+                .then(users => {
+                    resultsContainer.innerHTML = '';
+                    
+                    if (users.length === 0) {
+                        resultsContainer.innerHTML = '<div class="user-result-item">کاربری یافت نشد</div>';
+                    } else {
+                        users.forEach(user => {
+                            const userItem = document.createElement('div');
+                            userItem.className = 'user-result-item';
+                            userItem.innerHTML = `
+                                <strong>${user.full_name}</strong><br>
+                                <small>${user.department} - ${user.position || 'کاربر'}</small>
+                            `;
+                            userItem.addEventListener('click', () => {
+                                selectUser(user.id, user.full_name);
+                            });
+                            resultsContainer.appendChild(userItem);
+                        });
+                    }
+                    
+                    resultsContainer.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('خطا در جستجو:', error);
+                    resultsContainer.innerHTML = '<div class="user-result-item">خطا در جستجو</div>';
+                    resultsContainer.style.display = 'block';
+                });
+        }
+
+        // انتخاب کاربر
+        function selectUser(userId, userName) {
+            document.getElementById('selected_user_id').value = userId;
+            document.getElementById('selected_user_fullname').value = userName;
+            document.getElementById('selected_user_name').textContent = userName;
+            document.getElementById('selected_user_display').classList.remove('hidden');
+            document.getElementById('user_search').value = '';
+            document.getElementById('user_search_results').style.display = 'none';
+        }
+
+        // پنهان کردن نتایج جستجو وقتی کلیک خارج شود
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.user-search-container')) {
+                document.getElementById('user_search_results').style.display = 'none';
             }
         });
 
-        // توابع برای خروجی‌های مختلف
-        function generatePDF() {
+        // اعتبارسنجی فرم
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
             const searchType = document.getElementById('search_type').value;
-            const searchTerm = document.getElementById('search_term').value;
+            const selectedUserId = document.getElementById('selected_user_id').value;
+            const searchTerm = document.getElementById('search_term_serial').value;
+            const userSearch = document.getElementById('user_search').value;
             
-            if (searchTerm) {
-                window.open('generate_equipment_pdf.php?type=' + searchType + '&term=' + encodeURIComponent(searchTerm), '_blank');
-            } else {
-                alert('لطفاً ابتدا جستجو کنید');
+            if (searchType === 'name' && !selectedUserId && userSearch.length < 3) {
+                e.preventDefault();
+                alert('لطفاً یک کاربر انتخاب کنید یا حداقل 3 حرف از نام کاربر را وارد کنید');
+                document.getElementById('user_search').focus();
+            } else if (searchType === 'serial' && !searchTerm.trim()) {
+                e.preventDefault();
+                alert('لطفاً شماره سریال را وارد کنید');
+                document.getElementById('search_term_serial').focus();
             }
-        }
-
-        function exportToExcel() {
-            const searchType = document.getElementById('search_type').value;
-            const searchTerm = document.getElementById('search_term').value;
-            
-            if (searchTerm) {
-                window.open('export_equipment_excel.php?type=' + searchType + '&term=' + encodeURIComponent(searchTerm), '_blank');
-            } else {
-                alert('لطفاً ابتدا جستجو کنید');
-            }
-        }
+        });
     </script>
 </body>
 </html>
